@@ -21,13 +21,14 @@ parseCommand other = error $ "Invalid command '" ++ other ++ "'"
 data Position =
   Position {
     x :: Int,
-    y :: Int
+    y :: Int,
+    aim :: Int
   } deriving (Show)
 
 applyCommand :: Position -> Command -> Position
-applyCommand (Position x y) (Down n) = Position x (y + n)
-applyCommand (Position x y) (Up n) = Position x (y - n)
-applyCommand (Position x y) (Forward n) = Position (x + n) y
+applyCommand (Position x y aim) (Down n) = Position x y (aim + n)
+applyCommand (Position x y aim) (Up n) = Position x y (aim - n)
+applyCommand (Position x y aim) (Forward n) = Position (x + n) (y + aim * n) aim
 
 applyCommands :: Position -> [Command] -> Position
 applyCommands pos = foldl applyCommand pos
@@ -36,7 +37,7 @@ run :: IO ()
 run = do
   content <- readFile "input/day2.txt"
   let commands = map parseCommand $ lines content
-  let initialPosition = Position 0 0
+  let initialPosition = Position 0 0 0
   let finalPosition = foldl applyCommand initialPosition commands
   putStrLn $ "Final position: " ++ show finalPosition
 
