@@ -30,12 +30,12 @@ data Frequencies =
     ones :: Int
   } deriving (Show, Eq)
 
-frequenciesMostCommon :: Frequencies -> Int -> Int
-frequenciesMostCommon (Frequencies zeroes ones) ifEqual | zeroes == ones = ifEqual
+frequenciesMostCommon :: Int -> Frequencies -> Int
+frequenciesMostCommon ifEqual (Frequencies zeroes ones) | zeroes == ones = ifEqual
                                                         | otherwise      = if zeroes > ones then 0 else 1
 
-frequenciesLeastCommon :: Frequencies -> Int -> Int
-frequenciesLeastCommon (Frequencies zeroes ones) ifEqual | zeroes == ones = ifEqual
+frequenciesLeastCommon :: Int -> Frequencies -> Int
+frequenciesLeastCommon ifEqual (Frequencies zeroes ones) | zeroes == ones = ifEqual
                                                          | otherwise      = if zeroes < ones then 0 else 1
 
 data FocusedList =
@@ -48,8 +48,8 @@ data FocusedList =
 focusedListCurrent :: FocusedList -> Int
 focusedListCurrent (FocusedList _ current _) = current
 
-filterWithCurrent :: Int -> [FocusedList] -> [FocusedList]
-filterWithCurrent current = filter (\(FocusedList _ current' _) -> current == current')
+filterByCurrent :: Int -> [FocusedList] -> [FocusedList]
+filterByCurrent current = filter (\(FocusedList _ current' _) -> current == current')
 
 focusedListsFrequences :: [FocusedList] -> Frequencies
 focusedListsFrequences lists = Frequencies zeroes ones where
@@ -59,21 +59,22 @@ focusedListsFrequences lists = Frequencies zeroes ones where
 restoreInitialList :: FocusedList -> Digits
 restoreInitialList (FocusedList prev current remaining) = reverse prev ++ [current] ++ remaining
 
-oxygenGeneratorRating :: [FocusedList] -> Digits
-oxygenGeneratorRating [single] = restoreInitialList single
-oxygenGeneratorRating lists = oxygenGeneratorRating advanced where
+rating :: (Frequencies -> Int) -> [FocusedList] -> Digits
+rating commonDigit lists = result where
   frequencies = focusedListsFrequences lists
-  mostCommon = frequenciesMostCommon frequencies 1
-  filtered = filterWithCurrent mostCommon lists
-  advanced = map advanceFocusedList filtered
+  commonDigit' = commonDigit frequencies
+  filtered = filterByCurrent commonDigit' lists
+  result = case filtered of
+    [single] -> restoreInitialList single
+    _        ->
+        let advanced = map advanceFocusedList filtered in
+        rating commonDigit advanced
+
+oxygenGeneratorRating :: [FocusedList] -> Digits
+oxygenGeneratorRating = rating (frequenciesMostCommon 1)
 
 co2ScrubberRating :: [FocusedList] -> Digits
-co2ScrubberRating [single] = restoreInitialList single
-co2ScrubberRating lists = co2ScrubberRating advanced where
-  frequencies = focusedListsFrequences lists
-  leastCommon = frequenciesLeastCommon frequencies 0
-  filtered = filterWithCurrent leastCommon lists
-  advanced = map advanceFocusedList filtered
+co2ScrubberRating = rating (frequenciesLeastCommon 0)
 
 advanceFocusedList :: FocusedList -> FocusedList
 advanceFocusedList (FocusedList prev current (r : remaining)) = FocusedList (current : prev) r remaining
