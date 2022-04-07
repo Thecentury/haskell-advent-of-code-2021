@@ -79,25 +79,57 @@ allUnmarkedNumbers :: Board -> [Int]
 allUnmarkedNumbers (Board rows _) =
   allUnmarkedOfView rows
 
+allWinningBoards :: [Int] -> [Board] -> [(Board, Int)]
+allWinningBoards numbers boards =
+  let
+    go :: [Int] -> [(Board, Int)] -> [Board] -> [(Board, Int)]
+    go [] winnersSofar _remainingBoards = winnersSofar
+    go (number : otherNumbers) winnersSofar remainingBoards =
+      let
+        withNumber = map (markNumber number) remainingBoards
+        winningBoards = filter isBoardComplete withNumber
+        attachNumber = map (\board -> (board, number)) winningBoards
+      in
+        go otherNumbers (attachNumber ++ winnersSofar) (filter (not . isBoardComplete) withNumber)
+  in
+    go numbers [] boards
+
 --------------------------------------------------------------------------------
 
-runDay4 :: [String] -> Int
-runDay4 lines' =
+score :: Board -> Int -> Int
+score board lastNumber =
+  let
+    unmarkedNumbers = allUnmarkedNumbers board
+  in
+    lastNumber * (sum unmarkedNumbers)
+
+finalCountForPart1 :: [String] -> Int
+finalCountForPart1 lines' =
   case findFirstCompleteBoard randomNumbers boards of
     Nothing -> error "Could not find a complete board"
-    Just (completeBoard, finalNumber) -> finalScore where
-      unmarkedNumbers = allUnmarkedNumbers completeBoard
-      finalScore = finalNumber * (sum unmarkedNumbers)
+    Just (completeBoard, finalNumber) -> score completeBoard finalNumber
   where
    randomNumbers = map (\x -> read x :: Int) $ splitBy ',' (head lines')
    boardLines = map (map ((map parseToInt) . filter (not . null) . (splitBy ' '))) $ map tail $ chunksOf 6 $ tail lines'
    boards = map mkBoard boardLines
 
+scoreOfLastWinningBoard :: [String] -> Int
+scoreOfLastWinningBoard lines' =
+  let
+    randomNumbers = map (\x -> read x :: Int) $ splitBy ',' (head lines')
+    boardLines = map (map ((map parseToInt) . filter (not . null) . (splitBy ' '))) $ map tail $ chunksOf 6 $ tail lines'
+    boards = map mkBoard boardLines
+    winningBoards = allWinningBoards randomNumbers boards
+  in
+    case listToMaybe winningBoards of
+      Nothing -> error "Could not find the last winning board"
+      Just (lastBoard, lastNumber) -> score lastBoard lastNumber
+
 run :: IO ()
 run = do
   content <- readFile "input/day4.txt"
   let lines' = lines content
-  let finalScore = runDay4 lines'
-  putStrLn $ "Day 4. Final score: " ++ show finalScore
+  let finalScore = scoreOfLastWinningBoard lines'
+  putStrLn $ "Day 4. Final score of last winning board: " ++ show finalScore
 
   return ()
