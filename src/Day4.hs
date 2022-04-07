@@ -11,6 +11,7 @@ splitBy delimiter = foldr f [[]] where
                 | otherwise = (c:[]):xs
   f c l@(x:xs)  | c == delimiter = []:l
                 | otherwise = (c:x):xs
+  f _ [] = []
 
 parseToInt :: String -> Int
 parseToInt s =
@@ -80,18 +81,23 @@ allUnmarkedNumbers (Board rows _) =
 
 --------------------------------------------------------------------------------
 
+runDay4 :: [String] -> Int
+runDay4 lines' =
+  case findFirstCompleteBoard randomNumbers boards of
+    Nothing -> error "Could not find a complete board"
+    Just (completeBoard, finalNumber) -> finalScore where
+      unmarkedNumbers = allUnmarkedNumbers completeBoard
+      finalScore = finalNumber * (sum unmarkedNumbers)
+  where
+   randomNumbers = map (\x -> read x :: Int) $ splitBy ',' (head lines')
+   boardLines = map (map ((map parseToInt) . filter (not . null) . (splitBy ' '))) $ map tail $ chunksOf 6 $ tail lines'
+   boards = map mkBoard boardLines
+
 run :: IO ()
 run = do
   content <- readFile "input/day4.txt"
   let lines' = lines content
-  let randomNumbers = map (\x -> read x :: Int) $ splitBy ',' (head lines')
-
-  let boardLines = map (map ((map parseToInt) . filter (\l -> length l > 0) . (splitBy ' '))) $ map tail $ chunksOf 6 $ tail lines'
-  let boards = map mkBoard boardLines
-
-  let Just (completeBoard, finalNumber) = findFirstCompleteBoard randomNumbers boards
-  let unmarkedNumbers = allUnmarkedNumbers completeBoard
-  let finalScore = finalNumber * (sum unmarkedNumbers)
+  let finalScore = runDay4 lines'
   putStrLn $ "Day 4. Final score: " ++ show finalScore
 
   return ()
