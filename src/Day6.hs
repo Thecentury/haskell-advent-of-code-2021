@@ -1,6 +1,9 @@
 module Day6 where
 
 import Text.Read (readMaybe)
+import Data.List (sort, group, groupBy, sortOn)
+import Data.Function (on)
+import Debug.Trace (traceShow)
 
 --------------------------------------------------------------------------------
 
@@ -22,26 +25,44 @@ readInt s =
 
 type Age = Int
 
-advanceFish :: Age -> [Age]
-advanceFish 0 = [6, 8]
-advanceFish age = [age - 1]
+data SameAgeFish = SameAgeFish {
+  age :: Age,
+  count :: Int
+} deriving (Show, Eq)
 
-runADay :: [Age] -> [Age]
-runADay = concatMap advanceFish
+groupByAge :: [Age] -> [SameAgeFish]
+groupByAge = map (\xs -> SameAgeFish (head xs) (length xs)) . group . sort
+
+advanceFish :: SameAgeFish -> [SameAgeFish]
+advanceFish (SameAgeFish 0 count) = [SameAgeFish 6 count, SameAgeFish 8 count]
+advanceFish (SameAgeFish age count) = [SameAgeFish (age - 1) count]
+
+runADay :: [SameAgeFish] -> [SameAgeFish]
+runADay = map collapseGroup . groupBy ((==) `on` age) . sortOn age . concatMap advanceFish where
+  collapseGroup :: [SameAgeFish] -> SameAgeFish
+  collapseGroup counts = SameAgeFish (age $ head counts) (sum $ map count counts)
+
+runADayWithTracing :: [SameAgeFish] -> [SameAgeFish]
+runADayWithTracing fish =
+  let fish' = runADay fish
+  in traceShow fish' fish'
 
 applyNTimes :: Int -> (a -> a) -> a -> a
 applyNTimes n f = foldr (.) id (replicate n f)
 
-runNDays :: Int -> [Age] -> [Age]
+runNDays :: Int -> [SameAgeFish] -> [SameAgeFish]
 runNDays n = applyNTimes n runADay
+
+totalFishCount :: [SameAgeFish] -> Int
+totalFishCount = sum . map count
 
 run :: IO ()
 run = do
   content <- readFile "input/day6.txt"
-  let initialAges = map readInt $ splitBy ',' content
+  let initialAges = groupByAge $ map readInt $ splitBy ',' content
   let fishAfter80Days = runNDays 80 initialAges
-  let fishCountAfter80Days = length fishAfter80Days
+  let fishCountAfter80Days = totalFishCount fishAfter80Days
   putStrLn $ "Day 6.1. Fish after 80 days: " ++ show fishCountAfter80Days
   let fishAfter256Days = runNDays 256 initialAges
-  let fishCountAfter256Days = length fishAfter256Days
+  let fishCountAfter256Days = totalFishCount fishAfter256Days
   putStrLn $ "Day 6.2. Fish after 256 days: " ++ show fishCountAfter256Days
